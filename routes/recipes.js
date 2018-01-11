@@ -1,6 +1,7 @@
 // routes/recipes.js
 const router = require('express').Router()
 const { Recipe } = require('../models')
+const passport = require('../config/auth')
 
 router.get('/recipes', (req, res, next) => {
   Recipe.find()
@@ -20,8 +21,16 @@ router.get('/recipes', (req, res, next) => {
       })
       .catch((error) => next(error))
   })
-  .post('/recipes', (req, res, next) => {
+  .post('/recipes', passport.authorize('jwt', { session: false }), (req, res, next) => {
+    // Once authorized, the user data should be in `req.account`!
+    if (!req.account) {
+      const error = new Error('Unauthorized')
+      error.status = 401
+      return next(error)
+    }
+
     let newRecipe = req.body
+    newRecipe.authorId = req.account._id
 
     Recipe.create(newRecipe)
       .then((recipe) => {
